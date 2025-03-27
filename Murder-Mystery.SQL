@@ -1,10 +1,24 @@
-SELECT * FROM INHABITANT
-SELECT * FROM INHABITANT WHERE state = "friendly";
-SELECT * FROM INHABITANT WHERE state = "friendly" AND job = "weaponsmith";
-SELECT * FROM INHABITANT WHERE state = "friendly" AND job  LIKE  "%smith";
-SELECT personid FROM INHABITANT WHERE name = "Stranger";
-SELECT gold FROM INHABITANT WHERE name = "Stranger";
-SELECT * FROM item WHERE owner IS NULL
-UPDATE item SET owner = 20 WHERE owner IS NULL;
-SELECT * FROM ITEM WHERE owner = 20 
-SELECT * FROM INHABITANT WHERE state = "friendly" AND job = "dealer" OR job = "merchant";
+SELECT * FROM crime_scene_report 
+WHERE type = "murder" 	
+AND city like 'SQL City'
+AND date = 20180115 
+
+SELECT * FROM person 
+WHERE address_street_name = 'Northwestern Dr' 
+ORDER BY address_number DESC 
+LIMIT 1;
+
+SELECT * FROM person 
+WHERE name like "Annabel%" 	
+AND address_street_name = 'Franklin Ave'
+
+SELECT * FROM interview
+WHERE person_id = "14887"
+
+SELECT * FROM interview
+WHERE person_id = "16371"
+
+SELECT * FROM person
+INNER JOIN drivers_license
+ON person.license_id = drivers_license.id
+WHERE drivers_license.plate_number like "H42W%"
