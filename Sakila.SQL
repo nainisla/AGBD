@@ -170,6 +170,58 @@ GROUP BY actor.actor_id
 HAVING actores >= 5 
 ORDER BY film.title ;
 
+/*ejercicio 15*/
+SELECT first_name  ,last_name , customer.customer_id , SUM(amount) FROM payment
+INNER JOIN customer on payment.customer_id = customer.customer_id
+GROUP by customer.customer_id
+
+/*ejercicio 16*/
+SELECT actor.first_name ,title AS Titulo,length AS Duracion FROM film
+INNER JOIN film_actor ON film.film_id = film_actor.film_id
+INNER JOIN actor ON film_actor.actor_id = actor.actor_id
+WHERE film.length  < 50 
+ORDER BY film.length ASC
+
+/*ejercicio 17*/
+SELECT 
+last_name as Apellido , 
+city.city_id as Ciudad , 
+country.country_id as Pais , 
+address.address_id AS Direccion,
+COUNT(rental.rental_id) AS Alquileres, 
+SUM(payment.amount) AS Total_pagado
+FROM payment
+INNER JOIN customer ON payment.customer_id = customer.customer_id
+INNER JOIN store ON customer.store_id = store.store_id
+INNER JOIN address ON store.address_id = address.address_id
+INNER JOIN city ON address.city_id = city.city_id
+INNER JOIN country ON city.country_id = country.country_id
+INNER JOIN rental ON payment.rental_id = rental.rental_id
+GROUP BY customer.last_name
+ORDER BY Total_pagado ASC
+
+/*ejercicio 18*/
+INSERT INTO actor (actor_id,first_name,last_name,last_update)
+VALUES("201","Nain","Isla","2020-12-24 07:15:30")
+
+/*ejercici0 19*/
+INSERT INTO actor (actor_id,first_name,last_name,last_update)
+VALUES("202","Pedro","Nostel","2023-12-26 09:33:60");
+/*no se puede insetar 2 valores a la vez*/
+      ("203","Juan" ,"Chase" ,"2022-12-25 10:12:50")
+
+/*ejercicio 20*/
+UPDATE actor 
+SET first_name = "Lucas", last_name = "Arturo", last_update ="2334-45-43 08:80:70"
+where actor_id = 201
+
+/*ejercicio 21*/
+DELETE FROM actor 
+where actor_id = 201
+where actor_id = 202
+where actor_id = 203
+
+
 
 
 
