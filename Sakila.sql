@@ -220,12 +220,3 @@ DELETE FROM actor
 where actor_id = 201
 where actor_id = 202
 where actor_id = 203
-
-
-
-
-
-
-
-
-
