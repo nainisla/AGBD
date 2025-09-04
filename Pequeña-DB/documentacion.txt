@@ -1,0 +1,91 @@
+Documentación Final del Proyecto – Gestión de Eventos
+1.Idea del proyecto y propósito
+
+El sistema desarrollado es un backend en Flask para la gestión de eventos 
+sociales y empresariales.
+#Su propósito es permitir:Registrar clientes y sus datos de contacto.
+#Administrar salones disponibles para realizar eventos.
+#Crear y gestionar eventos, relacionándolos con clientes y salones.
+#Asignar servicios adicionales a los eventos (catering, decoración, música, etc.).
+#Controlar los pagos realizados por cada evento.
+#Este backend puede ser consumido por un frontend web o móvil, o bien probarse 
+directamente desde Postman.
+
+2.Configuración y conexión de la base de datos con Flask
+#El backend se configuró con Flask y SQLAlchemy como ORM.
+En config.py se definió:
+
+from flask_sqlalchemy import SQLAlchemy
+
+class Config:
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///salon_event.db'  
+    SQLALCHEMY_TRACK_MODIFICATIONS = False  
+
+db = SQLAlchemy()
+
+#Por defecto se usó SQLite (más simple para pruebas).
+El backend también puede conectarse a MySQL/MariaDB, modificando la URI:
+
+SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://usuario:password@localhost/salon_event'
+
+#En app.py se inicializa la base y se crean las tablas:
+
+from flask import Flask
+from config import Config, db
+from routes import routes
+
+app = Flask(__name__)
+app.config.from_object(Config)
+db.init_app(app)
+app.register_blueprint(routes)
+
+with app.app_context():
+    db.create_all()
+
+3.Ejemplos de consultas y código backend
+#Crear cliente (POST /clientes)
+{
+  "nombre": "Juan Perez",
+  "telefono": "123456789",
+  "email": "juan@example.com"
+}
+#Listar clientes (GET /clientes)
+[
+  {
+    "id": 1,
+    "nombre": "Juan Perez",
+    "telefono": "123456789",
+    "email": "juan@example.com"
+  }
+]
+#Crear evento (POST /eventos)
+{
+  "nombre_evento": "Fiesta de cumpleaños",
+  "fecha": "2025-09-10",
+  "tema": "Infantil",
+  "informe_detallado": "Decoración temática de dinosaurios",
+  "salon_id": 1,
+  "cliente_id": 1
+}
+
+4.Posibles mejoras futuras
+Integración con pasarelas de pago
+
+Hoy los pagos se registran manualmente en la base de datos.
+Con una pasarela (MercadoPago, PayPal, Stripe) los clientes 
+podrían pagar online, y la app registraría automáticamente 
+el pago en la base de datos.
+
+Sistema de roles
+Con roles podrías:
+Administrador → Puede crear, actualizar y eliminar cualquier registro.
+Organizador → Solo puede crear y ver eventos.
+Cliente → Solo puede ver sus propios eventos y pagos.
+
+Front-end web o móvil
+Un front-end permitiría a los usuarios interactuar con la app de forma visual:
+Un cliente podría reservar un salón desde una página web.
+Un administrador podría ver todos los eventos y pagos en un panel.
+
+5.Link al diagrama de Entidad-Relacion de tablas 
+https://dbdiagram.io/d/686fb81df413ba350840c1b8
