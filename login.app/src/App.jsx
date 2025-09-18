@@ -1,24 +1,17 @@
 import React from "react";
+import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import Login from "./Login";
+import CrearEvento from "./CrearEvento"; // Página administrador
 
 const App = () => {
   return (
-    <div style={styles.appContainer}>
-      <Login />
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/" element={<Login />} />
+        <Route path="/crear-evento" element={<CrearEvento />} />
+      </Routes>
+    </Router>
   );
-};
-
-// Estilos para el contenedor principal
-const styles = {
-  appContainer: {
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-    height: "100vh",
-    width: "100%",
-    backgroundColor: "#004d61",
-  },
 };
 
 export default App;

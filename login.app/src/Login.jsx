@@ -1,22 +1,29 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const Login = () => {
+  const navigate = useNavigate(); // <- esto es nuevo
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
 
   const handleSubmit = (e) => {
-    e.preventDefault();
+  e.preventDefault();
 
-    if (!email || !password || !role) {
-      setError("Por favor, completa todos los campos y selecciona un rol");
-      return;
-    }
+  if (!email || !password || !role) {
+    setError("Por favor, completa todos los campos y selecciona un rol");
+    return;
+  }
 
-    console.log("Enviando datos:", { email, password, role });
-    setError("");
-  };
+  console.log("Enviando datos:", { email, password, role });
+  setError("");
+
+  // Redirigir según rol
+  if (role === "admin") navigate("/crear-evento");
+  if (role === "cliente") navigate("/cliente");
+  if (role === "otros") navigate("/otros");
+};
 
   return (
     <div style={styles.container}>
