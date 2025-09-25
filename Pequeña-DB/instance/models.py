@@ -7,6 +7,7 @@ class Usuario(db.Model):
     email = db.Column(db.String(100), unique=True, nullable=False)
     password = db.Column(db.String(100), nullable=False)
     rol = db.Column(db.String(50), nullable=False)
+    puntos_fidelidad = db.Column(db.Integer, default=0)
     # Relación con eventos
     eventos = db.relationship('Evento', backref='usuario', lazy=True)
 

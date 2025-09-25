@@ -252,3 +252,20 @@ def eliminar_pago(id):
     db.session.delete(pago)
     db.session.commit()
     return jsonify({"mensaje": "Pago eliminado"})
+
+@routes.route('/usuarios/<int:id>/sumar_puntos', methods=['POST'])
+def sumar_puntos(id):
+    usuario = Usuario.query.get_or_404(id)
+    data = request.json
+    puntos = data.get("puntos", 0)
+    
+    if puntos <= 0:
+        return jsonify({"mensaje": "Los puntos deben ser mayores a 0"}), 400
+    
+    usuario.puntos_fidelidad += puntos
+    db.session.commit()
+    
+    return jsonify({
+        "mensaje": f"{puntos} puntos sumados a {usuario.nombre}",
+        "puntos_totales": usuario.puntos_fidelidad
+    })
