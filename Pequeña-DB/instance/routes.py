@@ -1,7 +1,8 @@
 from flask import Blueprint, request, jsonify
-from models import db, Usuario, Salon, Evento, Servicio, EventoServicio, Pago
+from models import db, Contacto,Usuario, Salon, Evento, Servicio, EventoServicio, Pago
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
+
 
 routes = Blueprint('routes', __name__)
 
@@ -269,3 +270,24 @@ def sumar_puntos(id):
         "mensaje": f"{puntos} puntos sumados a {usuario.nombre}",
         "puntos_totales": usuario.puntos_fidelidad
     })
+
+@routes.route('/')
+def home():
+    return {"mensaje": "Bienvenido a la API del sistema de gestión de salones y eventos"}
+
+@routes.route('/contacto', methods=['POST'])
+def enviar_contacto():
+    data = request.json
+    contacto = Contacto(
+         nombre_completo=data['nombreCompleto'],
+         email=data['email'],
+         celular=data.get('celular'),
+         tipo_evento=data.get('tipoEvento'),
+         cantidad_personas=data.get('cantidadPersonas'),
+         fecha_inicio=datetime.strptime(data['fechaInicio'], "%Y-%m-%d"),
+         fecha_fin=datetime.strptime(data['fechaFin'], "%Y-%m-%d"),
+         mensaje=data.get('mensaje')
+    )
+    db.session.add(contacto)
+    db.session.commit()
+    return {"mensaje": "Mensaje recibido, un ejecutivo se contactará a la brevedad."}, 201

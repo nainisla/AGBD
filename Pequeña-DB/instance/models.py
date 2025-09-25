@@ -1,4 +1,6 @@
 from config import db
+from datetime import datetime
+
 
 class Usuario(db.Model):
     __tablename__ = 'usuarios'
@@ -56,3 +58,16 @@ class Pago(db.Model):
     monto = db.Column(db.Numeric(10, 2), nullable=False)
     fecha_pago = db.Column(db.Date, nullable=False)
     metodo = db.Column(db.String(50))
+
+class Contacto(db.Model):
+    __tablename__ = 'contactos'
+    contacto_id = db.Column(db.Integer, primary_key=True)
+    nombre_completo = db.Column(db.String(200), nullable=False)
+    email = db.Column(db.String(100), nullable=False)
+    celular = db.Column(db.String(50))
+    tipo_evento = db.Column(db.String(100))
+    cantidad_personas = db.Column(db.Integer)
+    fecha_inicio = db.Column(db.Date)
+    fecha_fin = db.Column(db.Date)
+    mensaje = db.Column(db.Text)
+    fecha_envio = db.Column(db.DateTime, default=datetime.utcnow)
