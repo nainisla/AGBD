@@ -1,13 +1,14 @@
 from config import db
 
-class Cliente(db.Model):
-    __tablename__ = 'clientes'
-    cliente_id = db.Column(db.Integer, primary_key=True)
+class Usuario(db.Model):
+    __tablename__ = 'usuarios'
+    id = db.Column(db.Integer, primary_key=True)
     nombre = db.Column(db.String(100), nullable=False)
-    telefono = db.Column(db.String(20))
-    email = db.Column(db.String(100))
-
-    eventos = db.relationship('Evento', backref='cliente', lazy=True)
+    email = db.Column(db.String(100), unique=True, nullable=False)
+    password = db.Column(db.String(100), nullable=False)
+    rol = db.Column(db.String(50), nullable=False)
+    # Relación con eventos
+    eventos = db.relationship('Evento', backref='usuario', lazy=True)
 
 class Salon(db.Model):
     __tablename__ = 'salones'
@@ -27,7 +28,7 @@ class Evento(db.Model):
     informe_detallado = db.Column(db.Text)
 
     salon_id = db.Column(db.Integer, db.ForeignKey('salones.salon_id'), nullable=False)
-    cliente_id = db.Column(db.Integer, db.ForeignKey('clientes.cliente_id'), nullable=False)
+    usuario_id = db.Column(db.Integer, db.ForeignKey('usuarios.id'), nullable=False)
 
     pagos = db.relationship('Pago', backref='evento', lazy=True)
     servicios = db.relationship('EventoServicio', backref='evento', lazy=True)

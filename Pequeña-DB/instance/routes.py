@@ -1,41 +1,70 @@
 from flask import Blueprint, request, jsonify
-from models import db, Cliente, Salon, Evento, Servicio, EventoServicio, Pago
+from models import db, Usuario, Salon, Evento, Servicio, EventoServicio, Pago
 from datetime import datetime
+from werkzeug.security import generate_password_hash, check_password_hash
 
 routes = Blueprint('routes', __name__)
 
 
-# CLIENTES
+# USUARIOS
 
-@routes.route('/clientes', methods=['POST'])
-def crear_cliente():
+@routes.route('/usuarios', methods=['POST'])
+def crear_usuario():
     data = request.json
-    cliente = Cliente(nombre=data['nombre'], telefono=data.get('telefono'), email=data.get('email'))
-    db.session.add(cliente)
+    # Hashing de la contraseña antes de guardarla
+    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+    usuario = Usuario(
+        nombre=data['nombre'],
+        email=data['email'],
+        password=hashed_password,
+        rol=data['rol']
+    )
+    db.session.add(usuario)
     db.session.commit()
-    return jsonify({"mensaje": "Cliente creado"}), 201
+    return jsonify({"mensaje": "Usuario creado"}), 201
 
-@routes.route('/clientes', methods=['GET'])
-def listar_clientes():
-    clientes = Cliente.query.all()
-    return jsonify([{"id": c.cliente_id, "nombre": c.nombre, "telefono": c.telefono, "email": c.email} for c in clientes])
+@routes.route('/usuarios', methods=['GET'])
+def listar_usuarios():
+    usuarios = Usuario.query.all()
+    return jsonify([
+        {"id": u.id, "nombre": u.nombre, "email": u.email, "rol": u.rol}
+        for u in usuarios
+    ])
 
-@routes.route('/clientes/<int:id>', methods=['PUT'])
-def actualizar_cliente(id):
-    cliente = Cliente.query.get_or_404(id)
+@routes.route('/usuarios/<int:id>', methods=['PUT'])
+def actualizar_usuario(id):
+    usuario = Usuario.query.get_or_404(id)
     data = request.json
-    cliente.nombre = data.get("nombre", cliente.nombre)
-    cliente.telefono = data.get("telefono", cliente.telefono)
-    cliente.email = data.get("email", cliente.email)
+    usuario.nombre = data.get("nombre", usuario.nombre)
+    usuario.email = data.get("email", usuario.email)
+    if "password" in data:
+        usuario.password = generate_password_hash(data["password"], method='pbkdf2:sha256')
+    usuario.rol = data.get("rol", usuario.rol)
     db.session.commit()
-    return jsonify({"mensaje": "Cliente actualizado"})
+    return jsonify({"mensaje": "Usuario actualizado"})
 
-@routes.route('/clientes/<int:id>', methods=['DELETE'])
-def eliminar_cliente(id):
-    cliente = Cliente.query.get_or_404(id)
-    db.session.delete(cliente)
+@routes.route('/usuarios/<int:id>', methods=['DELETE'])
+def eliminar_usuario(id):
+    usuario = Usuario.query.get_or_404(id)
+    db.session.delete(usuario)
     db.session.commit()
-    return jsonify({"mensaje": "Cliente eliminado"})
+    return jsonify({"mensaje": "Usuario eliminado"})
+
+# LOGIN
+
+@routes.route("/login", methods=["POST"])
+def login():
+    data = request.get_json()
+    user = Usuario.query.filter_by(email=data.get("email")).first()
+
+    # Se agrego la validacion del rol, para que solo pueda ingresar si el email, la contraseña y el rol coinciden
+    if user and check_password_hash(user.password, data.get("password")) and user.rol == data.get("role"):
+        return jsonify({
+            "token": "fake-jwt-token",
+            "role": user.rol
+        })
+    else:
+        return jsonify({"message": "Credenciales inválidas"}), 401
 
 
 #SALONES
@@ -82,7 +111,7 @@ def crear_evento():
         tema=data.get('tema'),
         informe_detallado=data.get('informe_detallado'),
         salon_id=data['salon_id'],
-        cliente_id=data['cliente_id']
+        usuario_id=data['cliente_id']
     )
     db.session.add(evento)
     db.session.commit()
@@ -99,7 +128,7 @@ def listar_eventos():
             "tema": e.tema,
             "informe_detallado": e.informe_detallado,
             "salon": e.salon.nombre,
-            "cliente": e.cliente.nombre
+            "cliente": e.usuario.nombre
         } for e in eventos
     ])
 
@@ -124,7 +153,7 @@ def eliminar_evento(id):
 
 
 # SERVICIOS
- 
+
 @routes.route('/servicios', methods=['POST'])
 def crear_servicio():
     data = request.json
@@ -149,6 +178,7 @@ def actualizar_servicio(id):
     return jsonify({"mensaje": "Servicio actualizado"})
 
 @routes.route('/servicios/<int:id>', methods=['DELETE'])
+
 def eliminar_servicio(id):
     servicio = Servicio.query.get_or_404(id)
     db.session.delete(servicio)
