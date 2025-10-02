@@ -1,5 +1,18 @@
 import React, { useState, useEffect } from "react";
 
+// *** 1. FUNCIÓN PARA OBTENER HEADERS DE AUTENTICACIÓN ***
+const getAuthHeaders = () => {
+  const userId = localStorage.getItem('userId');
+  const userRole = localStorage.getItem('userRole');
+  
+  return {
+    "Content-Type": "application/json",
+    // Enviamos la información de autenticación guardada en el Login
+    "User-Id": userId || '', 
+    "User-Role": userRole || ''
+  };
+};
+
 const CrearEvento = () => {
   const [nombre, setNombre] = useState("");
   const [fecha, setFecha] = useState("");
@@ -13,13 +26,25 @@ const CrearEvento = () => {
 
   // Traer salones y clientes al cargar el componente
   useEffect(() => {
+    // 1. Obtener Salones (Se asume que esta ruta es pública)
     fetch("http://localhost:5000/salones")
       .then(res => res.json())
       .then(data => setSalones(data));
 
-    fetch("http://localhost:5000/usuarios")
-      .then(res => res.json())
-      .then(data => setClientes(data.filter(u => u.rol === "cliente")));
+    // 2. Obtener Usuarios/Clientes (RUTA PROTEGIDA)
+    fetch("http://localhost:5000/usuarios", { headers: getAuthHeaders() }) // <--- ¡AÑADIMOS LOS HEADERS AQUÍ!
+      .then(res => {
+        if (!res.ok) {
+          // Si el servidor devuelve 403 (Forbidden), lanzamos un error explícito
+          throw new Error("No tienes permiso (403). Debes ser administrador.");
+        }
+        return res.json();
+      })
+      .then(data => setClientes(data.filter(u => u.rol === "cliente")))
+      .catch(err => {
+        console.error("Error al cargar clientes:", err);
+        setMensaje(`Error al cargar clientes: ${err.message}`);
+      });
   }, []);
 
   const handleSubmit = async (e) => {
@@ -40,11 +65,14 @@ const CrearEvento = () => {
     };
 
     try {
+      // 3. Crear Evento (RUTA PROTEGIDA)
       const res = await fetch("http://localhost:5000/eventos", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: getAuthHeaders(), // <--- ¡AÑADIMOS LOS HEADERS AQUÍ!
         body: JSON.stringify(evento)
       });
+
+      const data = await res.json();
 
       if (res.ok) {
         setMensaje("Evento creado correctamente");
@@ -55,8 +83,8 @@ const CrearEvento = () => {
         setSalonId("");
         setClienteId("");
       } else {
-        const data = await res.json();
-        setMensaje(`Error: ${data.mensaje || "No se pudo crear el evento"}`);
+        // Manejo del error 403 (Acceso denegado) que viene del backend
+        setMensaje(`Error: ${data.mensaje || "No se pudo crear el evento (Acceso denegado)"}`);
       }
     } catch (err) {
       console.error(err);

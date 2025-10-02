@@ -2,161 +2,100 @@ import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
 const Login = () => {
-  const navigate = useNavigate(); // <- esto es nuevo
+  const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("");
   const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
   e.preventDefault();
 
-  if (!email || !password || !role) {
-    setError("Por favor, completa todos los campos y selecciona un rol");
-    return;
+  // ... (validaciones)
+
+  setError(""); // Limpiamos errores anteriores
+
+  try {
+    const res = await fetch("http://localhost:5000/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      // *** CAMBIO CRÍTICO: Incluir 'role' en el body ***
+      body: JSON.stringify({ email, password, role }), // AQUI SE INCLUYE EL ROL
+
+    });
+
+    const data = await res.json();
+    
+    if (res.ok) {
+      // 1. Éxito: El backend confirmó las credenciales.
+      // Ya no necesitas verificar si data.rol === role porque el backend ya lo hizo
+      
+      // Guardar el rol y el ID del usuario en el almacenamiento local
+      localStorage.setItem('userRole', data.rol);
+      localStorage.setItem('userId', data.id); 
+
+      // 2. Redirigir según el rol confirmado
+      if (data.rol === "admin") navigate("/crear-evento");
+      else if (data.rol === "cliente") navigate("/cliente");
+      else if (data.rol === "otros") navigate("/otros");
+      
+    } else {
+      // Error de credenciales (401) o falta de datos (400)
+      setError(data.mensaje || "Error al iniciar sesión");
+    }
+
+  } catch (err) {
+    console.error("Error de conexión:", err);
+    setError("No se pudo conectar con el servidor. Asegúrate de que Flask esté corriendo.");
   }
-
-  console.log("Enviando datos:", { email, password, role });
-  setError("");
-
-  // Redirigir según rol
-  if (role === "admin") navigate("/crear-evento");
-  if (role === "cliente") navigate("/cliente");
-  if (role === "otros") navigate("/otros");
 };
-
+  
   return (
-    <div style={styles.container}>
-      <h2>Iniciar Sesión</h2>
-      <form onSubmit={handleSubmit} style={styles.form}>
-        <input
-          type="email"
-          placeholder="Correo electrónico"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          style={styles.input}
-          autoComplete="email"
-          required
-        />
+    <div className="login-container">
+      <h2>Iniciar sesión</h2>
+      
+      {/* Mostrar error si existe */}
+      {error && <p style={{ color: 'red' }}>{error}</p>}
+      
+      <form onSubmit={handleSubmit}>
+        <div>
+          <label>Email:</label>
+          <input 
+            type="email" 
+            value={email} 
+            onChange={(e) => setEmail(e.target.value)} 
+            required 
+          />
+        </div>
+        
+        <div>
+          <label>Contraseña:</label>
+          <input 
+            type="password" 
+            value={password} 
+            onChange={(e) => setPassword(e.target.value)} 
+            required 
+          />
+        </div>
 
-        <input
-          type="password"
-          placeholder="Contraseña"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          style={styles.input}
-          autoComplete="current-password"
-          required
-        />
+        <div>
+          <label>Rol:</label>
+          <select 
+            value={role} 
+            onChange={(e) => setRole(e.target.value)} 
+            required
+          >
+            <option value="">Selecciona un rol</option>
+            <option value="admin">Administrador</option>
+            <option value="cliente">Cliente</option>
+            <option value="otros">Otros</option>
+          </select>
+        </div>
 
-        <fieldset style={styles.fieldset}>
-          <legend>Selecciona un rol:</legend>
-
-          <label style={styles.label}>
-            <input
-              type="radio"
-              name="role"
-              value="admin"
-              checked={role === "admin"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            Administrador
-          </label>
-
-          <label style={styles.label}>
-            <input
-              type="radio"
-              name="role"
-              value="cliente"
-              checked={role === "cliente"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            Cliente
-          </label>
-
-          <label style={styles.label}>
-            <input
-              type="radio"
-              name="role"
-              value="otros"
-              checked={role === "otros"}
-              onChange={(e) => setRole(e.target.value)}
-            />
-            Otros
-          </label>
-        </fieldset>
-
-        {error && <p style={styles.error}>{error}</p>}
-
-        <button type="submit" style={styles.button}>
-          Entrar
-        </button>
+        <button type="submit">Iniciar sesión</button>
       </form>
     </div>
   );
-};
-
-// Estilos
-const styles = {
-  container: {
-    width: "320px",
-    margin: "20px auto",
-    padding: "20px",
-    border: "2px solid #cccccc3d",
-    borderRadius: "8px",
-    textAlign: "center",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    fontFamily: "Arial, sans-serif",
-    boxSizing: "border-box",
-    backgroundColor: "#ffffff",
-  },
-
-  form: {
-    display: "flex",
-    flexDirection: "column",
-    width: "100%",
-  },
-
-  input: {
-    margin: "10px 0",
-    padding: "10px",
-    fontSize: "16px",
-    borderRadius: "4px",
-    border: "1px solid #ccc",
-  },
-
-  fieldset: {
-    margin: "15px 0",
-    padding: "10px",
-    border: "1px solid #ccc",
-    borderRadius: "4px",
-    textAlign: "left",
-  },
-
-  label: {
-    display: "block",
-    marginBottom: "8px",
-    cursor: "pointer",
-  },
-
-  button: {
-    padding: "10px",
-    backgroundColor: "#4CAF50",
-    color: "white",
-    border: "none",
-    cursor: "pointer",
-    borderRadius: "4px",
-    fontSize: "16px",
-  },
-
-  error: {
-    color: "red",
-    fontSize: "14px",
-    margin: "10px 0",
-  },
 };
 
 export default Login;

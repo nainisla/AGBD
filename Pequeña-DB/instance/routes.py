@@ -1,19 +1,87 @@
 from flask import Blueprint, request, jsonify
-from models import db, Contacto,Usuario, Salon, Evento, Servicio, EventoServicio, Pago
+from models import db, Contacto, Usuario, Salon, Evento, Servicio, EventoServicio, Pago
 from datetime import datetime
 from werkzeug.security import generate_password_hash, check_password_hash
-
+from functools import wraps
 
 routes = Blueprint('routes', __name__)
 
+# **********************************************
+# DECORADORES DE SEGURIDAD (NUEVO)
+# **********************************************
 
-# USUARIOS
+def admin_required(f):
+    """Verifica si el usuario es un administrador y está logueado."""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        # El frontend debe enviar estos headers
+        user_id = request.headers.get('User-Id')
+        user_role = request.headers.get('User-Role')
 
+        if not user_id or user_role != 'admin':
+            return jsonify({"mensaje": "Acceso denegado: Rol de administrador requerido."}), 403
+
+        # Opcional: Verificar que el ID sea real (buena práctica)
+        usuario = Usuario.query.get(user_id)
+        if not usuario or usuario.rol != 'admin':
+            return jsonify({"mensaje": "Acceso denegado: Usuario inválido o rol incorrecto."}), 403
+
+        return f(*args, **kwargs)
+    return decorated_function
+
+# **********************************************
+# APLICACIÓN DEL DECORADOR
+# **********************************************
+
+# USUARIOS - Ahora protegida
+@routes.route('/usuarios', methods=['GET'])
+@admin_required  # <--- Aplicamos el decorador aquí
+def listar_usuarios():
+    usuarios = Usuario.query.all()
+    return jsonify([
+        {"id": u.id, "nombre": u.nombre, "email": u.email, "rol": u.rol}
+        for u in usuarios
+    ])
+
+
+# **********************************************
+# RUTA: LOGIN
+# **********************************************
+@routes.route('/login', methods=['POST'])
+def login():
+    data = request.json
+    email = data.get('email')
+    password = data.get('password')
+    role = data.get('role')
+
+    if not email or not password or not role:
+        return jsonify({"mensaje": "Faltan correo electrónico, contraseña o rol"}), 400
+
+    # 1. Buscar el usuario por email
+    usuario = Usuario.query.filter_by(email=email).first()
+
+    # 2. Verificar usuario y contraseña (usando el hash)
+    if usuario and check_password_hash(usuario.password, password) and usuario.rol == role:
+        # Autenticación exitosa
+        return jsonify({
+            "mensaje": "Inicio de sesión exitoso",
+            "id": usuario.id,
+            "nombre": usuario.nombre,
+            "email": usuario.email,
+            "rol": usuario.rol  # Devolvemos el rol, que es clave para el frontend
+        }), 200
+    else:
+        # Autenticación fallida
+        return jsonify({"mensaje": "Credenciales inválidas"}), 401
+
+# **********************************************
+# RUTAS PARA USUARIOS
+# **********************************************
 @routes.route('/usuarios', methods=['POST'])
 def crear_usuario():
     data = request.json
     # Hashing de la contraseña antes de guardarla
-    hashed_password = generate_password_hash(data['password'], method='pbkdf2:sha256')
+    hashed_password = generate_password_hash(data['password'])
     usuario = Usuario(
         nombre=data['nombre'],
         email=data['email'],
@@ -23,14 +91,6 @@ def crear_usuario():
     db.session.add(usuario)
     db.session.commit()
     return jsonify({"mensaje": "Usuario creado"}), 201
-
-@routes.route('/usuarios', methods=['GET'])
-def listar_usuarios():
-    usuarios = Usuario.query.all()
-    return jsonify([
-        {"id": u.id, "nombre": u.nombre, "email": u.email, "rol": u.rol}
-        for u in usuarios
-    ])
 
 @routes.route('/usuarios/<int:id>', methods=['PUT'])
 def actualizar_usuario(id):
@@ -51,25 +111,9 @@ def eliminar_usuario(id):
     db.session.commit()
     return jsonify({"mensaje": "Usuario eliminado"})
 
-# LOGIN
-
-@routes.route("/login", methods=["POST"])
-def login():
-    data = request.get_json()
-    user = Usuario.query.filter_by(email=data.get("email")).first()
-
-    # Se agrego la validacion del rol, para que solo pueda ingresar si el email, la contraseña y el rol coinciden
-    if user and check_password_hash(user.password, data.get("password")) and user.rol == data.get("role"):
-        return jsonify({
-            "token": "fake-jwt-token",
-            "role": user.rol
-        })
-    else:
-        return jsonify({"message": "Credenciales inválidas"}), 401
-
-
-#SALONES
-
+# **********************************************
+# RUTAS PARA SALONES
+# **********************************************
 @routes.route('/salones', methods=['POST'])
 def crear_salon():
     data = request.json
@@ -100,10 +144,11 @@ def eliminar_salon(id):
     db.session.commit()
     return jsonify({"mensaje": "Salón eliminado"})
 
-
-# EVENTOS
-
+# **********************************************
+# RUTAS PARA EVENTOS
+# **********************************************
 @routes.route('/eventos', methods=['POST'])
+@admin_required  # <--- Aplicamos el decorador aquí
 def crear_evento():
     data = request.json
     evento = Evento(
@@ -112,11 +157,11 @@ def crear_evento():
         tema=data.get('tema'),
         informe_detallado=data.get('informe_detallado'),
         salon_id=data['salon_id'],
-        usuario_id=data['cliente_id']
+        cliente_id=data['cliente_id']
     )
     db.session.add(evento)
     db.session.commit()
-    return jsonify({"mensaje": "Evento creado"}), 201
+    return jsonify({"mensaje": "Evento creado exitosamente", "id": evento.evento_id}), 201
 
 @routes.route('/eventos', methods=['GET'])
 def listar_eventos():
@@ -152,9 +197,9 @@ def eliminar_evento(id):
     db.session.commit()
     return jsonify({"mensaje": "Evento eliminado"})
 
-
-# SERVICIOS
-
+# **********************************************
+# RUTAS PARA SERVICIOS
+# **********************************************
 @routes.route('/servicios', methods=['POST'])
 def crear_servicio():
     data = request.json
@@ -179,16 +224,15 @@ def actualizar_servicio(id):
     return jsonify({"mensaje": "Servicio actualizado"})
 
 @routes.route('/servicios/<int:id>', methods=['DELETE'])
-
 def eliminar_servicio(id):
     servicio = Servicio.query.get_or_404(id)
     db.session.delete(servicio)
     db.session.commit()
     return jsonify({"mensaje": "Servicio eliminado"})
 
-
-#CONECTA (eventos_servicios)
-
+# **********************************************
+# RUTAS PARA CONECTAR EVENTOS Y SERVICIOS
+# **********************************************
 @routes.route('/eventos/<int:evento_id>/servicios', methods=['POST'])
 def asignar_servicio(evento_id):
     data = request.json
@@ -212,9 +256,9 @@ def eliminar_evento_servicio(id):
     db.session.commit()
     return jsonify({"mensaje": "Servicio eliminado del evento"})
 
-
-# PAGOS
-
+# **********************************************
+# RUTAS PARA PAGOS
+# **********************************************
 @routes.route('/pagos', methods=['POST'])
 def registrar_pago():
     data = request.json
@@ -254,27 +298,9 @@ def eliminar_pago(id):
     db.session.commit()
     return jsonify({"mensaje": "Pago eliminado"})
 
-@routes.route('/usuarios/<int:id>/sumar_puntos', methods=['POST'])
-def sumar_puntos(id):
-    usuario = Usuario.query.get_or_404(id)
-    data = request.json
-    puntos = data.get("puntos", 0)
-    
-    if puntos <= 0:
-        return jsonify({"mensaje": "Los puntos deben ser mayores a 0"}), 400
-    
-    usuario.puntos_fidelidad += puntos
-    db.session.commit()
-    
-    return jsonify({
-        "mensaje": f"{puntos} puntos sumados a {usuario.nombre}",
-        "puntos_totales": usuario.puntos_fidelidad
-    })
-
-@routes.route('/')
-def home():
-    return {"mensaje": "Bienvenido a la API del sistema de gestión de salones y eventos"}
-
+# **********************************************
+# RUTA PARA CONTACTO
+# **********************************************
 @routes.route('/contacto', methods=['POST'])
 def enviar_contacto():
     data = request.json
@@ -291,3 +317,10 @@ def enviar_contacto():
     db.session.add(contacto)
     db.session.commit()
     return {"mensaje": "Mensaje recibido, un ejecutivo se contactará a la brevedad."}, 201
+
+# **********************************************
+# RUTA DE BIENVENIDA
+# **********************************************
+@routes.route('/')
+def home():
+    return {"mensaje": "Bienvenido a la API del sistema de gestión de salones y eventos"}
